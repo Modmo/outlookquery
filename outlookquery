@@ -1,0 +1,72 @@
+#!/bin/bash
+
+##dirs
+cleanbook="/tmp/cleanbook"
+namesbook="/tmp/namesbook"
+emailsbook="/tmp/emailsbook"
+schoolsbook="/tmp/schoolsbook"
+
+help () {
+	echo -e "Outlookquery søker innholdet i en outlook adressebok\n\n -h denne menyen\n -S synkroniser hele adresseboken og gjør den søkbar\n -q søk i den synkroniserte boken"
+}
+
+cleanadressbook(){
+### Vask adressebok
+strings -e S Downloads/udetails.oab | sed -E '/Exchange|Administrative|Offline|Configuration|Servers|Private|SPO_.*$|^\/|^\.|^,|^ /d'| tr '\n' ' ' > $cleanbook
+
+###grab email, name, username
+grep -Po '(?<=\w )([a-z0-9]+@[a-z]+\.no )([A-ZÆØÅ]{1}[a-zæøå]+ ){2,5}([a-z0-9]+)(?= [A-ZÆØÅ])' $cleanbook | sed -e 's/ /-/g;s/\.no-/\.no /g;s/-[a-z0-9]/ /g'
+###grab schools
+grep -Po '(?<=\.com )([A-ZÆØÅ][a-zæøå]+ )([A-ZÆØÅ]|[a-zæøå][a-zæøå]+ )([a-zæøå]+ )?([a-zæøå]+ )?([a-zæøå]+ )?(?=[a-z])' $cleanbook | grep -an '' > $schoolsbook
+
+###grab names
+#cat $cleanbook | tr '\n' ' ' | grep -Po '(?<=.no )([A-ZÆØÅ]{1}[a-zæøå]+ ){2,5}(?=[a-z])' | grep -an '' > $namesbook
+
+###grab emails
+#cat $cleanbook | tr '\n' ' ' | grep -Po '(?<=[a-z0-9] )(\w+@\w+\.no)(?= [A-ZÆØÅ])' | grep -an '' > $emailsbook
+
+###grab schools
+#cat $cleanbook | tr '\n' ' ' | grep -Po '(?<=\.com )([A-ZÆØÅ][a-zæøå]+ )([A-ZÆØÅ]|[a-zæøå][a-zæøå]+ )([a-zæøå]+ )?([a-zæøå]+ )?([a-zæøå]+ )?(?=[a-z])' | grep -an '' > $schoolsbook
+}
+
+searchadressbook(){
+
+###How many entries?
+#
+$bookentries=$(cat $namesbook | wc -l)
+
+#for (( number=1; number <= $bookentries; number++ )) do
+
+echo -e "Søker etter $query ...\n"
+	resultnr=$(grep -Pi "$query" $namesbook | grep -Po "^\d+" | wc -l)
+	if [ "$resultnr" == "0" ]; then
+		echo -e "Fant INGENTING"
+	else
+		echo -e "Fant følgende info:\n"
+			for (( nr=1; nr <= $resultnr; nr++  )) do
+				result=$(grep -Pi "$query" $namesbook | grep -Po "^\d+" | awk "NR==$nr")
+				ninfo=$(grep -Po "^$result:.*" $namesbook | cut -d ':' -f 2-)
+				einfo=$(grep -Po "^$result:.*" $emailsbook | cut -d ':' -f 2-)
+				sinfo=$(grep -Po "^$result:.*" $schoolsbook | cut -d ':' -f 2-)
+				echo -e "$ninfo\n$einfo\n$sinfo\n"
+			done
+	fi	
+
+#done
+
+}
+
+#### Leser flagg input
+while getopts "h S q:" flagg
+do
+    case "${flagg}" in
+        h) help;;
+	S) cleanadressbook;;
+        q) query=${OPTARG} searchadressbook;;
+	 \?) help;;
+    esac
+done
+
+if [ $OPTIND == 1 ]; then
+    help
+fi
