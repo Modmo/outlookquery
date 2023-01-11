@@ -12,12 +12,12 @@ help () {
 
 cleanadressbook(){
 ### Vask adressebok
-strings -e S Downloads/udetails.oab | sed -E '/Exchange|Administrative|Offline|Configuration|Servers|Private|SPO_.*$|^\/|^\.|^,|^ /d'| tr '\n' ' ' > $cleanbook
+strings -n 1 -e S Downloads/udetails.oab | tr '\n' ' ' | grep -Po '(?<=x).*?(?=x)' | sed -e 's/.*ou=E$//g;s/change.*\/cn=//g;s/\/o=E//g' > $cleanbook
 
 ###grab email, name, username
-grep -Po '(?<=\w )([a-z0-9]+@[a-z]+\.no )([A-ZÆØÅ]{1}[a-zæøå]+ ){2,5}([a-z0-9]+)(?= [A-ZÆØÅ])' $cleanbook | sed -e 's/ /-/g;s/\.no-/\.no /g;s/-[a-z0-9]/ /g'
+grep -Po '([a-z0-9]+-)\K.*(?=SIP:)' $cleanbook | grep -an '' > $namesbook
 ###grab schools
-grep -Po '(?<=\.com )([A-ZÆØÅ][a-zæøå]+ )([A-ZÆØÅ]|[a-zæøå][a-zæøå]+ )([a-zæøå]+ )?([a-zæøå]+ )?([a-zæøå]+ )?(?=[a-z])' $cleanbook | grep -an '' > $schoolsbook
+grep -Po '(@SPO_[a-z0-9\-]+)\K.*' $cleanbook | grep -an '' > $schoolsbook
 
 ###grab names
 #cat $cleanbook | tr '\n' ' ' | grep -Po '(?<=.no )([A-ZÆØÅ]{1}[a-zæøå]+ ){2,5}(?=[a-z])' | grep -an '' > $namesbook
